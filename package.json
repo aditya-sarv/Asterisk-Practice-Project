@@ -1,0 +1,24 @@
+{
+  "name": "asterisk-ari-connection",
+  "version": "1.0.0",
+  "description": "Minimal example of connecting to an Asterisk server through the ARI (Asterisk REST Interface) using node-ari-client.",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "asterisk",
+    "ari",
+    "voip",
+    "telephony"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "ari-client": "^2.2.0",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "nodemon": "^3.1.14"
+  }
+}
