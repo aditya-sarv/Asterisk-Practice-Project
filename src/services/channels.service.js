@@ -60,6 +60,15 @@ async function stopMohChannel({ channelId }) {
   return { success: true, message: `Music on hold stopped on channel ${channelId}.`, statusCode: 200 };
 }
 
+async function reserveChannel({ appArgs } = {}) {
+  const channel = await ari.channels.create({
+    endpoint: `${config.trunkTech}/${config.trunkName}`,
+    app: config.appName,
+    appArgs,
+  });
+  return { success: true, message: toPlainChannel(channel), statusCode: 201 };
+}
+
 // Pull the channel out of its current bridge and, if a target bridge is given, drop it into that one else hang it up.
 async function transferChannel({ channelId, fromBridgeId, toBridgeId }) {
   if (!fromBridgeId && !toBridgeId) {
@@ -123,6 +132,11 @@ const ChannelsService = {
   async create(req) {
     try {
       const body = req.body || {};
+
+      if (body.mode === 'reserve') {
+        return await reserveChannel(body);
+      }
+
       const destination = body.destination;
 
       if (!destination) return { success: false, message: 'destination is mandatory.', statusCode: 400 };
