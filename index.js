@@ -7,8 +7,14 @@ async function main() {
   await getClient();
   const ari = await startApp();
 
-  ari.on('StasisStart', (event, channel) => {
+  ari.on('StasisStart', async (event, channel) => {
     console.log(`[ari] StasisStart: channel ${channel.name} (${channel.id})`);
+    try {
+      await channel.answer();
+      console.log(`[ari] channel ${channel.id} answered`);
+    } catch (err) {
+      console.error(`[ari] failed to answer channel ${channel.id}:`, err && err.message ? err.message : err);
+    }
   });
 
   const app = express();

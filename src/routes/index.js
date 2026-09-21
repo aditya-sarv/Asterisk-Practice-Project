@@ -2,6 +2,7 @@ const express = require('express');
 
 const services = {
   applications: require('../services/application.service'),
+  channels: require('../services/channels.service'),
 };
 
 const requestMethods = {

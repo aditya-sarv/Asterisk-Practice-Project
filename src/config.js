@@ -7,12 +7,15 @@ function fromEnv(key, fallback= "") {
 }
 
 const config = {
-  url: fromEnv('ARI_URL'), // base URL of the Asterisk HTTP Server (http.conf)
+  url: fromEnv('ARI_URL'),
   username: fromEnv('ARI_USERNAME'),
   password: fromEnv('ARI_PASSWORD'),
   appName: fromEnv('ARI_APP_NAME'),
   port: Number(fromEnv('PORT')),
   eventSource: fromEnv('ARI_EVENT_SOURCE', 'channel:'),
+  trunkName: fromEnv('TRUNK_NAME'),
+  trunkCli: fromEnv('TRUNK_CLI'),
+  trunkTech: fromEnv('TRUNK_TECH'),
 };
 
 module.exports = config;
