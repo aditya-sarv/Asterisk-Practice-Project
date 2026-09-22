@@ -23,6 +23,12 @@ function buildTrunkEndpoint(destination) {
   return `${config.trunkTech}/${config.trunkName}/${destination}`;
 }
 
+// Recording names travel through URL query strings on every subsequent lookup
+// (get/stop/delete), where characters like "+" and spaces get silently mangled
+// by query-string decoding. Reject anything outside a safe charset up front
+// instead of silently rewriting what the caller asked for.
+const VALID_RECORDING_NAME = /^[A-Za-z0-9_.-]+$/;
+
 async function answerChannel({ channelId }) {
   await ari.channels.answer({ channelId });
   return { success: true, message: `Channel ${channelId} answered.`, statusCode: 200 };
@@ -76,6 +82,25 @@ async function playChannel({ channelId, media, lang }) {
   return { success: true, message: { playbackId: playback.id, media }, statusCode: 201 };
 }
 
+async function recordChannel({ channelId, name, format, maxDurationSeconds, maxSilenceSeconds, ifExists, beep, terminateOn }) {
+  if (!name) return { success: false, message: 'name is mandatory (the recording filename).', statusCode: 400 };
+  if (!VALID_RECORDING_NAME.test(name)) return { success: false, message: 'name may only contain letters, numbers, ".", "_" and "-" (no spaces or other symbols).', statusCode: 400 };
+  if (!format) return { success: false, message: 'format is mandatory (e.g. "wav", "ulaw", "gsm").', statusCode: 400 };
+
+  const recording = await ari.channels.record({
+    channelId,
+    name,
+    format,
+    maxDurationSeconds,
+    maxSilenceSeconds,
+    ifExists,
+    beep,
+    terminateOn,
+  });
+
+  return { success: true, message: { name: recording.name, format: recording.format, target_uri: recording.target_uri, state: recording.state }, statusCode: 201 };
+}
+
 async function reserveChannel({ appArgs } = {}) {
   const channel = await ari.channels.create({
     endpoint: `${config.trunkTech}/${config.trunkName}`,
@@ -123,6 +148,7 @@ const updateActions = {
   startMoh: startMohChannel,
   stopMoh: stopMohChannel,
   play: playChannel,
+  record: recordChannel,
   transfer: transferChannel,
 };
 

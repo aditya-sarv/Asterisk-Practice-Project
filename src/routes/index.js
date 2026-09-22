@@ -4,6 +4,7 @@ const services = {
   applications: require('../services/application.service'),
   channels: require('../services/channels.service'),
   bridges: require('../services/bridges.service'),
+  recordings: require('../services/recordings.service'),
 };
 
 const requestMethods = {
@@ -12,6 +13,7 @@ const requestMethods = {
   'create': require('./request-methods/create'),
   'update': require('./request-methods/update'),
   'delete': require('./request-methods/delete'),
+  'download': require('./request-methods/download'),
 };
 
 function describeError(err) {

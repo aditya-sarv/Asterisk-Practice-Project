@@ -6,6 +6,12 @@ async function connect() {
   ari = await getClient();
 }
 
+// Recording names travel through URL query strings on every subsequent lookup
+// (get/stop/delete), where characters like "+" and spaces get silently mangled
+// by query-string decoding. Reject anything outside a safe charset up front
+// instead of silently rewriting what the caller asked for.
+const VALID_RECORDING_NAME = /^[A-Za-z0-9_.-]+$/;
+
 function toPlainBridge(bridge) {
   return {
     id: bridge.id,
@@ -40,11 +46,35 @@ async function stopMohBridge({ bridgeId }) {
   return { success: true, message: `Music on hold stopped on bridge ${bridgeId}.`, statusCode: 200 };
 }
 
+async function recordBridge({ bridgeId, name, format, maxDurationSeconds, maxSilenceSeconds, ifExists, beep, terminateOn }) {
+  if (!name) return { success: false, message: 'name is mandatory (the recording filename).', statusCode: 400 };
+  if (!VALID_RECORDING_NAME.test(name)) return { success: false, message: 'name may only contain letters, numbers, ".", "_" and "-" (no spaces or other symbols).', statusCode: 400 };
+  if (!format) return { success: false, message: 'format is mandatory (e.g. "wav", "ulaw", "gsm").', statusCode: 400 };
+
+
+
+  const recording = await ari.bridges.record({
+    bridgeId,
+    name,
+    format,
+    maxDurationSeconds,
+    maxSilenceSeconds,
+    ifExists,
+    beep,
+    terminateOn,
+  });
+
+  console.log(recording);
+
+  return { success: true, message: { name: recording.name, format: recording.format, target_uri: recording.target_uri, state: recording.state }, statusCode: 201 };
+}
+
 const updateActions = {
   addChannel: addNewChannel,
   removeChannel: removeExistingChannel,
   startMoh: startMohBridge,
   stopMoh: stopMohBridge,
+  record: recordBridge,
 };
 
 const BridgesService = {
