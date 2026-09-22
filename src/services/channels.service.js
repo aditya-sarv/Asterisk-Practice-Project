@@ -38,6 +38,16 @@ async function unholdChannel({ channelId }) {
   return { success: true, message: `Channel ${channelId} taken off hold.`, statusCode: 200 };
 }
 
+async function progressChannel({ channelId }) {
+  await ari.channels.ring({ channelId });
+  return { success: true, message: `Ringing indication started on channel ${channelId}.`, statusCode: 200 };
+}
+
+async function ringStopChannel({ channelId }) {
+  await ari.channels.ringStop({ channelId });
+  return { success: true, message: `Ringing indication stopped on channel ${channelId}.`, statusCode: 200 };
+}
+
 async function muteChannel({ channelId, direction }) {
   const dir = direction || 'both';
   await ari.channels.mute({ channelId, direction: dir });
@@ -104,6 +114,8 @@ async function transferChannel({ channelId, fromBridgeId, toBridgeId }) {
 
 const updateActions = {
   answer: answerChannel,
+  progress: progressChannel,
+  ringStop: ringStopChannel,
   hold: holdChannel,
   unhold: unholdChannel,
   mute: muteChannel,
