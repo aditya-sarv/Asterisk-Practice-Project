@@ -23,10 +23,6 @@ function buildTrunkEndpoint(destination) {
   return `${config.trunkTech}/${config.trunkName}/${destination}`;
 }
 
-// Recording names travel through URL query strings on every subsequent lookup
-// (get/stop/delete), where characters like "+" and spaces get silently mangled
-// by query-string decoding. Reject anything outside a safe charset up front
-// instead of silently rewriting what the caller asked for.
 const VALID_RECORDING_NAME = /^[A-Za-z0-9_.-]+$/;
 
 async function answerChannel({ channelId }) {
@@ -82,9 +78,15 @@ async function playChannel({ channelId, media, lang }) {
   return { success: true, message: { playbackId: playback.id, media }, statusCode: 201 };
 }
 
+async function fetchRtpStats(channelId) {
+  const rtpDetails = await ari.channels.rtpstatistics({ channelId: channelId });
+  return { success: true, message: rtpDetails, statusCode: 200 };
+}
+
 async function recordChannel({ channelId, name, format, maxDurationSeconds, maxSilenceSeconds, ifExists, beep, terminateOn }) {
   if (!name) return { success: false, message: 'name is mandatory (the recording filename).', statusCode: 400 };
   if (!VALID_RECORDING_NAME.test(name)) return { success: false, message: 'name may only contain letters, numbers, ".", "_" and "-" (no spaces or other symbols).', statusCode: 400 };
+  if (!['wav', 'ulaw', 'gsm'].includes(format)) return { success: false, message: 'Invalid format to record audio.', statusCode: 404 };
   if (!format) return { success: false, message: 'format is mandatory (e.g. "wav", "ulaw", "gsm").', statusCode: 400 };
 
   const recording = await ari.channels.record({
@@ -171,6 +173,8 @@ const ChannelsService = {
   async getOne(req) {
     try {
       const channelId = req.query.channelId;
+      const rtpStatistics = req.query.rtpStatistics || false;
+      if (rtpStatistics) return fetchRtpStats(channelId);
       if (!channelId) return { success: false, message: 'channelId is mandatory.', statusCode: 400 };
       const channel = await ari.channels.get({ channelId });
       return { success: true, message: toPlainChannel(channel), statusCode: 200 };
