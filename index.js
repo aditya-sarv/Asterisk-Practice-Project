@@ -8,17 +8,6 @@ async function main() {
   await getClient();
   const ari = await startApp();
 
-  try {
-    const reserved = await ChannelsService.create({ body: { mode: 'reserve' } });
-    if (reserved && reserved.success) {
-      console.log(`[ari] reserved boot-time channel ${reserved.message.id} on trunk endpoint`);
-    } else {
-      console.warn('[ari] could not reserve boot-time channel:', reserved && reserved.message);
-    }
-  } catch (err) {
-    console.error('[ari] failed to reserve boot-time channel:', err && err.message ? err.message : err);
-  }
-
   ari.on('StasisStart', async (event, channel) => {
     console.log(`[ari] StasisStart: channel ${channel.name} (${channel.id}), state=${channel.state}`);
     if (channel.state === 'Down') {
@@ -31,6 +20,18 @@ async function main() {
       console.log(`[ari] channel ${channel.id} answered`);
     } catch (err) {
       console.error(`[ari] failed to answer channel ${channel.id}:`, err && err.message ? err.message : err);
+    }
+  });
+
+  ari.on('ChannelDtmfReceived', async (event, channel) => {
+    const digit = event.digit;
+    console.log(`[ari] ChannelDtmfReceived: channel ${channel.id} pressed "${digit}"`);
+
+    const result = await ChannelsService.handleDtmf({ channelId: channel.id, digit });
+    if (result.success) {
+      console.log(`[ari] DTMF "${digit}" on channel ${channel.id}: ${JSON.stringify(result.message)}`);
+    } else {
+      console.warn(`[ari] DTMF "${digit}" on channel ${channel.id} failed:`, result.message);
     }
   });
 

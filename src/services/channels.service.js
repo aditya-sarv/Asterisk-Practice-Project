@@ -60,6 +60,12 @@ async function stopMohChannel({ channelId }) {
   return { success: true, message: `Music on hold stopped on channel ${channelId}.`, statusCode: 200 };
 }
 
+async function playChannel({ channelId, media, lang }) {
+  if (!media) return { success: false, message: 'media is mandatory (e.g. "sound:hello-world", "digits:1234", "tone:ring").', statusCode: 400 };
+  const playback = await ari.channels.play({ channelId, media, lang });
+  return { success: true, message: { playbackId: playback.id, media }, statusCode: 201 };
+}
+
 async function reserveChannel({ appArgs } = {}) {
   const channel = await ari.channels.create({
     endpoint: `${config.trunkTech}/${config.trunkName}`,
@@ -104,7 +110,13 @@ const updateActions = {
   unmute: unmuteChannel,
   startMoh: startMohChannel,
   stopMoh: stopMohChannel,
+  play: playChannel,
   transfer: transferChannel,
+};
+
+const dtmfResponses = {
+  '1': 'sound:hello-world',
+  '2': 'digits:2',
 };
 
 const ChannelsService = {
@@ -176,6 +188,28 @@ const ChannelsService = {
       if (!channelId) return { success: false, message: 'channelId is mandatory.', statusCode: 400 };
       await ari.channels.hangup({ channelId });
       return { success: true, message: `Channel ${channelId} hung up.`, statusCode: 200 };
+    } catch (err) {
+      return { success: false, message: err.message, statusCode: 500 };
+    }
+  },
+
+  async handleDtmf({ channelId, digit }) {
+    if (digit === '#') {
+      try {
+        await ari.channels.hangup({ channelId });
+        return { success: true, message: `Channel ${channelId} hung up ("#" pressed).`, statusCode: 200 };
+      } catch (err) {
+        return { success: false, message: err.message, statusCode: 500 };
+      }
+    }
+
+    const media = dtmfResponses[digit];
+    if (!media) {
+      return { success: false, message: `No response mapped to digit "${digit}".`, statusCode: 400 };
+    }
+
+    try {
+      return await playChannel({ channelId, media });
     } catch (err) {
       return { success: false, message: err.message, statusCode: 500 };
     }
