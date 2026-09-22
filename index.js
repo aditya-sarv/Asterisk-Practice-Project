@@ -20,7 +20,12 @@ async function main() {
   }
 
   ari.on('StasisStart', async (event, channel) => {
-    console.log(`[ari] StasisStart: channel ${channel.name} (${channel.id})`);
+    console.log(`[ari] StasisStart: channel ${channel.name} (${channel.id}), state=${channel.state}`);
+    if (channel.state === 'Down') {
+      console.log(`[ari] channel ${channel.id} is Down (not dialed yet) - skipping auto-answer`);
+      return;
+    }
+
     try {
       await channel.answer();
       console.log(`[ari] channel ${channel.id} answered`);
@@ -65,9 +70,7 @@ async function main() {
     process.exit(0);
   };
 
-  // Signal interrupt - by me
   process.on('SIGINT', () => shutdown('SIGINT'));
-  // Signal Terminate - please shut down request send by other programs
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
