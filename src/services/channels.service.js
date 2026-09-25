@@ -1,5 +1,6 @@
 const config = require('../config');
 const { getClient } = require('../ariConnection');
+const ChannelsRepository = require('../database/channels.repository');
 
 let ari;
 
@@ -21,6 +22,11 @@ function toPlainChannel(channel) {
 
 function buildTrunkEndpoint(destination) {
   return `${config.trunkTech}/${config.trunkName}/${destination}`;
+}
+
+function saveChannel(record) {
+  ChannelsRepository.insertChannel({ trunk: config.trunkName, ...record })
+    .catch((err) => console.error(`[es] failed to save channel ${record.channel.id}:`, err.message));
 }
 
 const VALID_RECORDING_NAME = /^[A-Za-z0-9_.-]+$/;
@@ -109,6 +115,7 @@ async function reserveChannel({ appArgs } = {}) {
     app: config.appName,
     appArgs,
   });
+  saveChannel({ channel, type: 'Created' });
   return { success: true, message: toPlainChannel(channel), statusCode: 201 };
 }
 
@@ -201,6 +208,7 @@ const ChannelsService = {
         callerId: body.callerId || config.trunkCli,
         timeout: body.timeout || 30,
       });
+      saveChannel({ channel, type: 'Originated', destination });
 
       return { success: true, message: toPlainChannel(channel), statusCode: 201 };
     } catch (e) {

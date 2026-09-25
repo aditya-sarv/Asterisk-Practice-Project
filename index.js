@@ -3,13 +3,29 @@ const config = require('./src/config');
 const { getClient, startApp, disconnect } = require('./src/ariConnection');
 const { router } = require('./src/routes');
 const ChannelsService = require('./src/services/channels.service');
+const ChannelsRepository = require('./src/database/channels.repository');
+const { setupIndex } = require('./src/database/connect-es');
+const channelsIndex = require('./src/database/indexes/channels.index');
 
 async function main() {
+  try {
+    await setupIndex(channelsIndex);
+  } catch (err) {
+    console.error('[es] could not set up channels index:', err.message);
+  }
+
   await getClient();
   const ari = await startApp();
 
   ari.on('StasisStart', async (event, channel) => {
     console.log(`[ari] StasisStart: channel ${channel.name} (${channel.id}), state=${channel.state}`);
+    if (channel.state !== 'Down') {
+      // Created/originated channels were already saved by the API; anything else is an inbound call.
+      ChannelsRepository.exists(channel.id)
+        .then((known) => known || ChannelsRepository.insertChannel({ channel, type: 'Inbound' }))
+        .catch((err) => console.error(`[es] failed to save inbound channel ${channel.id}:`, err.message));
+    }
+
     if (channel.state === 'Down') {
       console.log(`[ari] channel ${channel.id} is Down (not dialed yet) - skipping auto-answer`);
       return;
@@ -33,6 +49,19 @@ async function main() {
     } else {
       console.warn(`[ari] DTMF "${digit}" on channel ${channel.id} failed:`, result.message);
     }
+  });
+
+  ari.on('ChannelStateChange', (event, channel) => {
+    ChannelsRepository.updateChannel(channel.id, { state: channel.state })
+      .catch((err) => console.error(`[es] failed to update state of channel ${channel.id}:`, err.message));
+  });
+
+  ari.on('ChannelDestroyed', (event, channel) => {
+    ChannelsRepository.updateChannel(channel.id, {
+      state: 'Destroyed',
+      endTime: ChannelsRepository.toEpochMillis(event.timestamp),
+      hangupCause: event.cause_txt || null,
+    }).catch((err) => console.error(`[es] failed to record hangup of channel ${channel.id}:`, err.message));
   });
 
   const app = express();

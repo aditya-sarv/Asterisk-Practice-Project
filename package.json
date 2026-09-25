@@ -16,6 +16,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@elastic/elasticsearch": "^8.19.2",
     "ari-client": "^2.2.0",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",
